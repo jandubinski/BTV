@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python finetune.py --openclip-cachedir /home/jk/jd/BTV/caches_jk

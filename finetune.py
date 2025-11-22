@@ -48,7 +48,8 @@ def finetune(args):
         train_dataset,
         preprocess_fn,
         location=args.data_location,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        model=model
     )
     num_batches = len(dataset.train_loader)
 
@@ -121,9 +122,9 @@ def finetune(args):
 
 if __name__ == '__main__':
     data_location = os.path.expanduser('~/Datasets')
-    models = ['ViT-B-16']#['RN50x4']#
+    models = ['ViT-B-32']#['RN50x4']#
     #datasets=['MNIST']
-    datasets = ['CIFAR10', 'CIFAR100', 'SVHN', 'GTSRB','MNIST']
+    datasets = ['CIFAR100']
     # datasets = ['CIFAR100']
     epochs = {
         'Cars': 35,

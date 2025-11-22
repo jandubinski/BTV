@@ -11,8 +11,6 @@ from heads import get_classification_head
 from modeling import ImageClassifier
 
 from datasets.registry import get_dataset
-import analyse as simul
-import pynvml
 
 def is_printable(layer_name):
     printable = 'Batch' not in layer_name

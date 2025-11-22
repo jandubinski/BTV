@@ -18,7 +18,8 @@ def build_classification_head(model, dataset_name, template, data_location, devi
         dataset_name,
         None,
         location=data_location,
-        poison=poison
+        poison=poison,
+        model=model
 
     )
     model.eval()
