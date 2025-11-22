@@ -3,6 +3,7 @@ import argparse
 
 import torch
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -96,12 +97,19 @@ def parse_arguments():
         "--openclip-cachedir",
         type=str,
         default='~/.cache/clip',
-
         help='Directory for caching models from OpenCLIP'
     )
+    parser.add_argument(
+        "--target_label",
+        type=int,
+        default=0,
+        help="Target class for backdoor attack (default=0)."
+    )
+
     parsed_args = parser.parse_args()
     parsed_args.device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     if parsed_args.load is not None and len(parsed_args.load) == 1:
         parsed_args.load = parsed_args.load[0]
+
     return parsed_args

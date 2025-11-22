@@ -33,8 +33,9 @@ class GenericDataset(object):
         self.classnames = None
 
 
-def split_train_into_train_val(dataset, new_dataset_class_name, batch_size, num_workers, val_fraction, max_val_samples=None, seed=0):
-    assert val_fraction > 0. and val_fraction < 1.
+def split_train_into_train_val(dataset, new_dataset_class_name, batch_size, num_workers,
+                               val_fraction, max_val_samples=None, seed=0):
+    assert 0. < val_fraction < 1.
     total_size = len(dataset.train_dataset)
     val_size = int(total_size * val_fraction)
     if max_val_samples is not None:
@@ -54,10 +55,7 @@ def split_train_into_train_val(dataset, new_dataset_class_name, batch_size, num_
     if new_dataset_class_name == 'MNISTVal':
         assert trainset.indices[0] == 36044
 
-
-    new_dataset = None
-
-    new_dataset_class = type(new_dataset_class_name, (GenericDataset, ), {})
+    new_dataset_class = type(new_dataset_class_name, (GenericDataset,), {})
     new_dataset = new_dataset_class()
 
     new_dataset.train_dataset = trainset
@@ -79,50 +77,84 @@ def split_train_into_train_val(dataset, new_dataset_class_name, batch_size, num_
 
     return new_dataset
 
-def get_dataset_hijack(dataset_name, preprocess, location, batch_size=128, num_workers=16, val_fraction=0.1, max_val_samples=5000):
+
+def get_dataset_hijack(dataset_name, preprocess, location, batch_size=128,
+                       num_workers=16, val_fraction=0.1, max_val_samples=5000):
     if dataset_name.endswith('Val'):
         # Handle val splits
         if dataset_name in registry:
             dataset_class = registry[dataset_name]
         else:
             base_dataset_name = dataset_name.split('Val')[0]
-            base_dataset = get_dataset(base_dataset_name, preprocess, location, batch_size, num_workers)
+            base_dataset = get_dataset(base_dataset_name, preprocess, location, batch_size=batch_size,
+                                       num_workers=num_workers, model=None)
             dataset = split_train_into_train_val(
                 base_dataset, dataset_name, batch_size, num_workers, val_fraction, max_val_samples)
             return dataset
     else:
-        assert dataset_name in registry, f'Unsupported dataset: {dataset_name}. Supported datasets: {list(registry.keys())}'
+        assert dataset_name in registry, \
+            f'Unsupported dataset: {dataset_name}. Supported datasets: {list(registry.keys())}'
         dataset_class = registry[dataset_name]
     dataset = dataset_class(
         preprocess, location=location, batch_size=batch_size, num_workers=num_workers
     )
     return dataset
 
-def get_dataset(dataset_name, preprocess, location, model, poison=0,batch_size=128, num_workers=4, val_fraction=0.1, max_val_samples=5000,poison_name='badnet',portion=0.1,trigger_type=0):
+
+def get_dataset(dataset_name,
+                preprocess,
+                location,
+                model,
+                poison=0,
+                batch_size=128,
+                num_workers=4,
+                val_fraction=0.1,
+                max_val_samples=5000,
+                poison_name='badnet',
+                portion=0.1,
+                trigger_type=0,
+                target_label=0):
+    """
+    Main dataset factory. When poison == 1 it will also create backdoor train/test loaders
+    using target_label as the attack target class.
+    """
     if dataset_name.endswith('Val'):
         # Handle val splits
         if dataset_name in registry:
             dataset_class = registry[dataset_name]
         else:
             base_dataset_name = dataset_name.split('Val')[0]
-            base_dataset = get_dataset(base_dataset_name, preprocess, location,poison, batch_size, num_workers)
+            base_dataset = get_dataset(base_dataset_name, preprocess, location,
+                                       model=model, poison=poison, batch_size=batch_size,
+                                       num_workers=num_workers)
             dataset = split_train_into_train_val(
                 base_dataset, dataset_name, batch_size, num_workers, val_fraction, max_val_samples)
             return dataset
     else:
-        assert dataset_name in registry, f'Unsupported dataset: {dataset_name}. Supported datasets: {list(registry.keys())}'
+        assert dataset_name in registry, \
+            f'Unsupported dataset: {dataset_name}. Supported datasets: {list(registry.keys())}'
         dataset_class = registry[dataset_name]
-    
 
     dataset = dataset_class(
-        preprocess, model, location=location, batch_size=batch_size, num_workers=num_workers, p=poison
+        preprocess, model, location=location,
+        batch_size=batch_size, num_workers=num_workers, p=poison
     )
 
     if poison == 1:
-        dataset.create_backdoor_train_loader(proportion=portion, attack_name=poison_name,trigger_type=trigger_type, batch_size=batch_size)
-        dataset.create_backdoor_test_loader(attack_name=poison_name,trigger_type=trigger_type, batch_size=batch_size)
-        print('bd is injected, backdoor method is {}'.format(poison_name))
-
-
+        dataset.create_backdoor_train_loader(
+            proportion=portion,
+            attack_name=poison_name,
+            trigger_type=trigger_type,
+            target_label=target_label,
+            batch_size=batch_size
+        )
+        dataset.create_backdoor_test_loader(
+            attack_name=poison_name,
+            trigger_type=trigger_type,
+            target_label=target_label,
+            batch_size=batch_size
+        )
+        print('bd is injected, backdoor method is {}, target_label={}'.format(
+            poison_name, target_label))
 
     return dataset

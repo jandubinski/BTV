@@ -26,7 +26,7 @@ def finetune(args):
     # ------------------------------
     # Load or build model
     # ------------------------------
-    if args.load is not None and args.load.endswith(".pt"):
+    if args.load is not None and isinstance(args.load, str) and args.load.endswith(".pt"):
         print(f"[TRACE] Loading encoder checkpoint from {args.load}")
         image_encoder = ImageEncoder.load(args.load)
     else:
@@ -56,12 +56,15 @@ def finetune(args):
     dataset = get_dataset(
         train_dataset,
         preprocess_fn,
-        poison_name=args.attack_method,
         location=args.data_location,
-        batch_size=args.batch_size,
+        model=args.model,
         poison=p,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        poison_name=args.attack_method,
         portion=args.poison_rate,
-        trigger_type=args.trigger_type
+        trigger_type=args.trigger_type,
+        target_label=args.target_label,
     )
     num_batches = len(dataset.train_loader)
     print(f"[TRACE] Dataset created. {num_batches} batches per epoch.")
@@ -103,8 +106,6 @@ def finetune(args):
         model.train()
 
         print("[TRACE] Creating DataLoader for this epoch...")
-
-        # ⭐ FIXED: add num_workers + pin_memory
         data_loader = get_dataloader(
             dataset,
             is_train=True,
@@ -117,7 +118,6 @@ def finetune(args):
         print("[TRACE] DataLoader ready. Beginning batches...")
 
         for i, batch in enumerate(data_loader):
-
             if i == 0:
                 print("[TRACE] First batch successfully loaded.")
 
@@ -203,7 +203,8 @@ if __name__ == "__main__":
                         args.trigger_type = tp
                         args.save = f"checkpoints_poison/{model_name}"
 
-                        # ⭐ Add workers here
+                        # dataloader workers
                         args.num_workers = 8
 
+                        # NOTE: args.target_label comes from CLI, default=0
                         finetune(args)
